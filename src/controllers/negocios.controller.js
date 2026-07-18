@@ -1,0 +1,145 @@
+const negociosRepo = require("../repositories/negocios.repository");
+const negocioUsuariosRepo = require("../repositories/negocioUsuarios.repository");
+const usuariosRepo = require("../repositories/usuarios.repository");
+
+async function crear(req, res) {
+  try {
+    const { nombre, tipoNegocio, direccion, telefonoContacto, correoContacto } = req.body;
+    if (!nombre) {
+      return res.status(400).json({ mensaje: "El nombre del negocio es obligatorio" });
+    }
+    const negocio = await negociosRepo.crearNegocio({
+      nombre,
+      tipoNegocio,
+      direccion,
+      telefonoContacto,
+      correoContacto,
+    });
+    await negocioUsuariosRepo.agregarUsuario({
+      negocioId: negocio.id,
+      usuarioId: req.usuario.id,
+      rol: "dueño",
+    });
+    return res.status(201).json({ mensaje: "Negocio creado", negocio });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function listarMios(req, res) {
+  try {
+    const negocios = await negociosRepo.listarPorUsuario(req.usuario.id);
+    return res.json({ negocios });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function obtener(req, res) {
+  try {
+    const negocio = await negociosRepo.buscarPorId(req.negocioId);
+    return res.json({ negocio });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function actualizar(req, res) {
+  try {
+    const mapaCampos = {
+      nombre: "nombre",
+      tipoNegocio: "tipo_negocio",
+      logoUrl: "logo_url",
+      descripcion: "descripcion",
+      direccion: "direccion",
+      telefonoContacto: "telefono_contacto",
+      correoContacto: "correo_contacto",
+      horaSilencioInicio: "hora_silencio_inicio",
+      horaSilencioFin: "hora_silencio_fin",
+      limiteEnviosDia: "limite_envios_dia",
+      activo: "activo",
+    };
+    const campos = {};
+    for (const [campoBody, columna] of Object.entries(mapaCampos)) {
+      if (req.body[campoBody] !== undefined) campos[columna] = req.body[campoBody];
+    }
+    const negocio = await negociosRepo.actualizarNegocio(req.negocioId, campos);
+    return res.json({ mensaje: "Negocio actualizado", negocio });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function agregarEmpleado(req, res) {
+  try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede agregar empleados" });
+    }
+    const { correo, rol } = req.body;
+    if (!correo || !["dueño", "editor"].includes(rol)) {
+      return res.status(400).json({ mensaje: "correo y rol (dueño|editor) son obligatorios" });
+    }
+    const usuario = await usuariosRepo.buscarPorCorreo(correo);
+    if (!usuario) {
+      return res.status(404).json({ mensaje: "No existe un usuario con ese correo" });
+    }
+    const acceso = await negocioUsuariosRepo.agregarUsuario({
+      negocioId: req.negocioId,
+      usuarioId: usuario.id,
+      rol,
+    });
+    return res.status(201).json({ mensaje: "Empleado agregado", acceso });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function listarEmpleados(req, res) {
+  try {
+    const empleados = await negocioUsuariosRepo.listarPorNegocio(req.negocioId);
+    return res.json({ empleados });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function obtenerHorario(req, res) {
+  try {
+    const horario = await negociosRepo.obtenerHorario(req.negocioId);
+    return res.json({ horario });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function actualizarHorario(req, res) {
+  try {
+    const { dias } = req.body;
+    if (!Array.isArray(dias)) {
+      return res.status(400).json({ mensaje: "dias debe ser un arreglo" });
+    }
+    const horario = await negociosRepo.reemplazarHorario(req.negocioId, dias);
+    return res.json({ mensaje: "Horario actualizado", horario });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+module.exports = {
+  crear,
+  listarMios,
+  obtener,
+  actualizar,
+  agregarEmpleado,
+  listarEmpleados,
+  obtenerHorario,
+  actualizarHorario,
+};

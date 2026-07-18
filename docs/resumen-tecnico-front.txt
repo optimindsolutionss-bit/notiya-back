@@ -1,0 +1,279 @@
+NOTIYA - GUIA TECNICA SENCILLA
+=========================================================
+
+Esto explica, endpoint por endpoint, que llamar y que esperar de vuelta.
+No hace falta conocer el backend por dentro, solo seguir esta guia.
+
+IDEAS GENERALES ANTES DE EMPEZAR
+---------------------------------
+
+1. El backend corre en http://localhost:4000 en desarrollo. Todo se llama
+   con el prefijo /api.
+
+2. Hay rutas publicas (no piden nada especial) y rutas privadas (piden un
+   "token" que se obtiene al iniciar sesion). Las rutas privadas se marcan
+   abajo con [PRIVADA]; las que no tienen esa marca son [PUBLICA].
+
+3. Como funciona el login: el usuario se registra o inicia sesion, el
+   backend responde con un "token" (un texto largo). Ese token se debe
+   guardar en el front (por ejemplo en memoria o storage) y mandarlo en
+   TODAS las rutas privadas dentro de un header asi:
+
+     Authorization: Bearer <el-token-que-recibiste>
+
+   El token vence a las 8 horas; despues de eso hay que volver a hacer
+   login.
+
+4. Todo lo que el front ENVIA en el body de una peticion va en formato
+   "camelCase" (ej: tipoNegocio, precioPromocional, whatsappNumero).
+
+5. Todo lo que el backend DEVUELVE viene tal cual esta guardado en la base
+   de datos, en formato "snake_case" (ej: tipo_negocio, precio_promocional).
+   Ojo con esto: son dos estilos distintos, uno para lo que mandas y otro
+   para lo que recibes. Tambien: los precios llegan como texto con dos
+   decimales (ej "5000.00"), hay que convertirlos a numero si se van a
+   sumar o formatear.
+
+6. Cuando algo sale mal, el backend siempre responde con:
+     { "mensaje": "explicacion del error" }
+   junto con un codigo HTTP:
+     400 = faltan datos o estan mal
+     401 = no iniciaste sesion o el token vencio
+     403 = iniciaste sesion pero no tienes permiso sobre ese negocio
+     404 = eso que pediste no existe
+     409 = conflicto (ej: correo ya registrado)
+     500 = error interno del servidor
+
+7. Casi todo cuelga de un "negocioId" que va en la URL. Por eso primero
+   hay que crear o elegir un negocio antes de poder crear productos,
+   clientes, avisos, etc.
+
+
+FLUJO SUGERIDO PARA ARMAR LAS PANTALLAS DEL FRONT
+---------------------------------------------------
+
+1. Pantalla de registro / login -> guarda el token.
+2. Pantalla "mis negocios" -> si no tiene ninguno, formulario para crear uno.
+3. Dentro de un negocio: catalogo (categorias y productos), clientes,
+   promociones, avisos y el historial de comandos de IA.
+4. Una vista aparte, publica, para la pantalla fisica del local.
+
+
+1. AUTENTICACION
+------------------
+
+POST /api/auth/registro   [PUBLICA]
+Body: { nombre, correo, password }
+Responde 201: { mensaje, usuario: { id, nombre, correo } }
+Responde 409 si el correo ya esta registrado.
+
+POST /api/auth/login   [PUBLICA]
+Body: { correo, password }
+Responde 200: { mensaje, token, usuario: { id, nombre, correo } }
+Responde 401 si el correo o la contrasena estan mal.
+
+
+2. NEGOCIOS
+------------
+
+POST /api/negocios   [PRIVADA]
+Crea un negocio. Quien lo crea queda automaticamente como "dueno".
+Body: { nombre, tipoNegocio, direccion, telefonoContacto, correoContacto }
+Responde 201: { mensaje, negocio }
+
+GET /api/negocios   [PRIVADA]
+Lista los negocios a los que el usuario tiene acceso, con su rol en cada uno.
+Responde 200: { negocios: [ { ...datos del negocio, rol } ] }
+
+GET /api/negocios/:negocioId   [PRIVADA]
+Detalle de un negocio. Hay que ser dueno o empleado de ese negocio.
+Responde 200: { negocio }
+
+PUT /api/negocios/:negocioId   [PRIVADA]
+Actualiza cualquiera de estos campos (todos opcionales):
+  nombre, tipoNegocio, logoUrl, descripcion, direccion, telefonoContacto,
+  correoContacto, horaSilencioInicio, horaSilencioFin, limiteEnviosDia, activo
+Responde 200: { mensaje, negocio }
+
+POST /api/negocios/:negocioId/empleados   [PRIVADA, solo el dueno]
+Agrega a otro usuario YA REGISTRADO como empleado de este negocio.
+Body: { correo, rol }  -- rol es "dueño" o "editor"
+Responde 201: { mensaje, acceso }
+
+GET /api/negocios/:negocioId/empleados   [PRIVADA]
+Lista quienes tienen acceso al negocio y con que rol.
+
+GET /api/negocios/:negocioId/horarios   [PRIVADA]
+Lista el horario de atencion (hasta 7 filas, una por dia; 0 = domingo).
+
+PUT /api/negocios/:negocioId/horarios   [PRIVADA]
+Reemplaza TODO el horario de una vez (manda la semana completa).
+Body: { dias: [ { diaSemana, horaApertura, horaCierre, cerrado }, ... ] }
+
+
+3. CATEGORIAS
+--------------
+Base: /api/negocios/:negocioId/categorias   [PRIVADAS]
+
+POST /            Body: { nombre }
+GET  /            Lista las categorias del negocio
+PUT  /:categoriaId    Body: { nombre }
+DELETE /:categoriaId
+
+
+4. PRODUCTOS
+-------------
+Base: /api/negocios/:negocioId/productos   [PRIVADAS]
+
+POST /
+Body: { categoriaId, nombre, descripcion, precio, imagenUrl }
+
+GET /              Lista todos los productos del negocio
+GET /:productoId   Un producto puntual
+
+PUT /:productoId
+Body (cualquier subconjunto): { categoriaId, nombre, descripcion, precio, imagenUrl }
+
+PATCH /:productoId/disponibilidad
+Body: { disponible: true | false }
+IMPORTANTE: si se manda "disponible: false", el backend genera y publica
+automaticamente un aviso de "se agoto" sin que el front tenga que hacer
+nada mas.
+
+DELETE /:productoId
+
+
+5. PROMOCIONES
+---------------
+Base: /api/negocios/:negocioId/promociones   [PRIVADAS]
+
+POST /
+Body: { productoId, titulo, descripcion, precioPromocional, fechaInicio, fechaFin }
+Las fechas van en formato ISO, ej: "2026-07-20T00:00:00Z"
+
+GET /
+Por defecto trae todas las promociones. Con ?activas=true trae solo las
+que estan vigentes en este momento (util para la pantalla o para mostrar
+"ofertas de hoy").
+
+PUT /:promocionId   Body: cualquiera de los campos de arriba, mas "activo"
+DELETE /:promocionId
+
+
+6. PLANTILLAS DE MENSAJES
+---------------------------
+Base: /api/negocios/:negocioId/plantillas   [PRIVADAS]
+
+POST /   Body: { nombre, tipo, contenido }
+  tipo puede ser: "aviso", "promocion", "recordatorio" o "menu"
+
+GET /
+PUT /:plantillaId   Body: { nombre, tipo, contenido }
+DELETE /:plantillaId
+
+
+7. CLIENTES
+------------
+Base: /api/negocios/:negocioId/clientes
+
+POST /suscripcion   [PUBLICA]
+Pensada para un link de WhatsApp (tipo wa.me) que el cliente abre solo.
+Body: { nombre, whatsappNumero }
+Si el numero ya existia, solo lo (re)suscribe a este negocio.
+Responde 201: { mensaje, cliente, suscripcion }
+
+GET /   [PRIVADA]
+Lista los clientes suscritos y activos de este negocio.
+
+DELETE /:clienteId   [PRIVADA]
+Da de baja al cliente de ESTE negocio (no lo borra de la plataforma).
+
+
+8. MENSAJES (avisos, promos, recordatorios)
+----------------------------------------------
+Base: /api/negocios/:negocioId/mensajes   [PRIVADAS]
+
+POST /
+Body: {
+  productoId, promocionId, tipo, contenido, canal,
+  fechaHoraEnvio, esRecurrente, diasRecurrencia
+}
+  tipo: "aviso" | "promocion" | "recordatorio" | "menu"
+  canal: "whatsapp" | "pantalla" | "ambos" (por defecto "ambos")
+  fechaHoraEnvio: opcional. Si no se manda, o es una hora que ya paso, el
+    mensaje se publica de inmediato. Si es una hora futura, queda "pendiente"
+    (por ahora no hay un proceso automatico que lo dispare solo mas tarde,
+    eso quedaria como una mejora futura).
+
+GET /
+Lista los mensajes del negocio. Se puede filtrar con
+?estado=pendiente | enviado | fallido | cancelado
+
+PATCH /:mensajeId/cancelar
+Cancela un mensaje, solo si todavia esta "pendiente".
+
+
+9. COMANDOS DE IA (texto o voz)
+----------------------------------
+Base: /api/negocios/:negocioId/comandos   [PRIVADAS]
+
+POST /
+El dueno escribe (o el front manda la transcripcion de un audio) algo como
+"hoy a las 5 sale el pan de queso".
+Body: { textoOriginal, audioUrl }   -- audioUrl es opcional
+El backend intenta detectar el producto, la hora y la accion (si esta
+disponible, agotado, en promocion, etc). Si junta suficiente informacion,
+responde con un "borrador" de mensaje ya armado y listo para publicar.
+Responde 201: { mensaje, comando, borrador }
+  Si "borrador" viene null, quiere decir que no detecto suficiente
+  informacion como para armar un aviso solo; ahi el dueno tendria que
+  crear el mensaje a mano (endpoint de MENSAJES).
+
+GET /
+Historial de comandos interpretados, util para mostrar "lo que la IA
+entendio" en pantallas de revision.
+
+PATCH /:comandoId/confirmar
+El dueno revisa el borrador y confirma: se publica el aviso y se generan
+los envios a los clientes suscritos.
+
+PATCH /:comandoId/descartar
+El dueno descarta el borrador (por ejemplo si la IA entendio mal).
+
+
+10. PANTALLA DIGITAL
+----------------------
+
+GET /api/pantalla/:negocioId   [PUBLICA]
+Pensada para la pantalla fisica del negocio (una tele o tablet en modo
+kiosco, sin login). Junta todo lo que hay que mostrar:
+
+Responde 200:
+{
+  "negocio": { "nombre", "logoUrl", "descripcion" },
+  "productos": [ ...solo los que estan disponibles... ],
+  "promociones": [ ...solo las vigentes ahora mismo... ],
+  "avisos": [ ...los ultimos avisos ya publicados... ]
+}
+
+Esta pantalla se puede refrescar cada cierto tiempo (por ejemplo cada 30-60
+segundos) para que se vea siempre actualizada, ya que no hay conexion en
+tiempo real todavia.
+
+
+COSAS QUE TODAVIA FALTAN (para que el front no asuma que ya existen)
+------------------------------------------------------------------------
+
+- El envio real de mensajes por WhatsApp: por ahora los avisos quedan
+  registrados como "pendientes" de enviar, porque todavia no hay un
+  proveedor de WhatsApp (Twilio o Meta) conectado con credenciales reales.
+  El aviso SI aparece en la pantalla digital, solo el envio a WhatsApp
+  esta pendiente.
+
+- No hay todavia un proceso que dispare solo los mensajes programados para
+  una hora futura; hoy en dia solo se procesan los que se publican de
+  inmediato o los que se confirman a mano.
+
+- No hay subida de imagenes: los campos "logoUrl" e "imagenUrl" esperan
+  que el front ya tenga la URL de la imagen (por ejemplo subida a otro
+  servicio), el backend no la sube ni la procesa.
