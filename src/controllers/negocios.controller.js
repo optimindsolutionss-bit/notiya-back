@@ -80,8 +80,8 @@ async function agregarEmpleado(req, res) {
       return res.status(403).json({ mensaje: "Solo el dueño puede agregar empleados" });
     }
     const { correo, rol } = req.body;
-    if (!correo || !["dueño", "editor"].includes(rol)) {
-      return res.status(400).json({ mensaje: "correo y rol (dueño|editor) son obligatorios" });
+    if (!correo || !["dueño", "editor", "promotor"].includes(rol)) {
+      return res.status(400).json({ mensaje: "correo y rol (dueño|editor|promotor) son obligatorios" });
     }
     const usuario = await usuariosRepo.buscarPorCorreo(correo);
     if (!usuario) {
