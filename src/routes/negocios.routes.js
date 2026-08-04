@@ -20,9 +20,9 @@ router.get("/", controlador.listarMios);
 router.get("/:negocioId", verificarAccesoNegocio(), controlador.obtener);
 router.put("/:negocioId", verificarAccesoNegocio(), controlador.actualizar);
 router.post("/:negocioId/empleados", verificarAccesoNegocio(), controlador.agregarEmpleado);
-router.get("/:negocioId/empleados", verificarAccesoNegocio(), controlador.listarEmpleados);
 router.put("/:negocioId/empleados/:usuarioId", verificarAccesoNegocio(), controlador.actualizarRolEmpleado);
 router.delete("/:negocioId/empleados/:usuarioId", verificarAccesoNegocio(), controlador.quitarEmpleado);
+router.get("/:negocioId/empleados", verificarAccesoNegocio(), controlador.listarEmpleados);
 router.get("/:negocioId/horarios", verificarAccesoNegocio(), controlador.obtenerHorario);
 router.put("/:negocioId/horarios", verificarAccesoNegocio(), controlador.actualizarHorario);
 
