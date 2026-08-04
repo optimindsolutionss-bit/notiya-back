@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { obtenerAcceso } = require("../repositories/negocioUsuarios.repository");
+const usuariosRepo = require("../repositories/usuarios.repository");
 
 function verificarToken(req, res, next) {
   const encabezado = req.headers.authorization;
@@ -36,11 +37,20 @@ function verificarAccesoNegocio(rolesPermitidos = ["dueño", "editor"]) {
   };
 }
 
-function verificarSuperAdmin(req, res, next) {
-  if (!req.usuario?.esSuperAdmin) {
-    return res.status(403).json({ mensaje: "Requiere permisos de super admin" });
+async function verificarSuperAdmin(req, res, next) {
+  try {
+    if (!req.usuario?.esSuperAdmin) {
+      return res.status(403).json({ mensaje: "Requiere permisos de super admin" });
+    }
+    const usuario = await usuariosRepo.buscarPorId(req.usuario.id);
+    if (!usuario?.es_superadmin) {
+      return res.status(403).json({ mensaje: "Requiere permisos de super admin" });
+    }
+    next();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
   }
-  next();
 }
 
 module.exports = { verificarToken, verificarAccesoNegocio, verificarSuperAdmin };

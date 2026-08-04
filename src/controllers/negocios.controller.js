@@ -49,6 +49,9 @@ async function obtener(req, res) {
 
 async function actualizar(req, res) {
   try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede editar el negocio" });
+    }
     const mapaCampos = {
       nombre: "nombre",
       tipoNegocio: "tipo_negocio",
@@ -101,6 +104,9 @@ async function agregarEmpleado(req, res) {
 
 async function listarEmpleados(req, res) {
   try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede ver el equipo" });
+    }
     const empleados = await negocioUsuariosRepo.listarPorNegocio(req.negocioId);
     return res.json({ empleados });
   } catch (error) {
@@ -167,6 +173,9 @@ async function quitarEmpleado(req, res) {
 
 async function obtenerHorario(req, res) {
   try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede ver el horario" });
+    }
     const horario = await negociosRepo.obtenerHorario(req.negocioId);
     return res.json({ horario });
   } catch (error) {
@@ -177,6 +186,9 @@ async function obtenerHorario(req, res) {
 
 async function actualizarHorario(req, res) {
   try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede editar el horario" });
+    }
     const { dias } = req.body;
     if (!Array.isArray(dias)) {
       return res.status(400).json({ mensaje: "dias debe ser un arreglo" });
