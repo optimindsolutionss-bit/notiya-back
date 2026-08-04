@@ -13,6 +13,7 @@ async function crear(req, res) {
       precioPromocional,
       fechaInicio,
       fechaFin,
+      creadoPor: req.usuario.id,
     });
     return res.status(201).json({ mensaje: "Promoción creada", promocion });
   } catch (error) {
@@ -35,6 +36,15 @@ async function listar(req, res) {
 
 async function actualizar(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      const existente = await promocionesRepo.buscarPorId(req.negocioId, req.params.promocionId);
+      if (!existente) {
+        return res.status(404).json({ mensaje: "Promoción no encontrada" });
+      }
+      if (existente.creado_por !== req.usuario.id) {
+        return res.status(403).json({ mensaje: "Solo puedes editar tus propias promociones" });
+      }
+    }
     const mapaCampos = {
       productoId: "producto_id",
       titulo: "titulo",
@@ -61,6 +71,15 @@ async function actualizar(req, res) {
 
 async function eliminar(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      const existente = await promocionesRepo.buscarPorId(req.negocioId, req.params.promocionId);
+      if (!existente) {
+        return res.status(404).json({ mensaje: "Promoción no encontrada" });
+      }
+      if (existente.creado_por !== req.usuario.id) {
+        return res.status(403).json({ mensaje: "Solo puedes eliminar tus propias promociones" });
+      }
+    }
     const eliminada = await promocionesRepo.eliminar(req.negocioId, req.params.promocionId);
     if (!eliminada) {
       return res.status(404).json({ mensaje: "Promoción no encontrada" });

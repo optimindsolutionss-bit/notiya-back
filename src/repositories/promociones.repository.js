@@ -1,11 +1,11 @@
 const pool = require("../config/db");
 
-async function crear(negocioId, { productoId, titulo, descripcion, precioPromocional, fechaInicio, fechaFin }) {
+async function crear(negocioId, { productoId, titulo, descripcion, precioPromocional, fechaInicio, fechaFin, creadoPor }) {
   const { rows } = await pool.query(
-    `INSERT INTO promociones (negocio_id, producto_id, titulo, descripcion, precio_promocional, fecha_inicio, fecha_fin)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO promociones (negocio_id, producto_id, titulo, descripcion, precio_promocional, fecha_inicio, fecha_fin, creado_por)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
-    [negocioId, productoId || null, titulo, descripcion || null, precioPromocional || null, fechaInicio, fechaFin]
+    [negocioId, productoId || null, titulo, descripcion || null, precioPromocional || null, fechaInicio, fechaFin, creadoPor]
   );
   return rows[0];
 }
