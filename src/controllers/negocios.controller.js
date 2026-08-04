@@ -109,6 +109,62 @@ async function listarEmpleados(req, res) {
   }
 }
 
+async function actualizarRolEmpleado(req, res) {
+  try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede cambiar roles" });
+    }
+    const { rol } = req.body;
+    if (!["dueño", "editor", "promotor"].includes(rol)) {
+      return res.status(400).json({ mensaje: "rol debe ser dueño, editor o promotor" });
+    }
+    const usuarioId = Number(req.params.usuarioId);
+    const acceso = await negocioUsuariosRepo.obtenerAcceso(req.negocioId, usuarioId);
+    if (!acceso) {
+      return res.status(404).json({ mensaje: "Ese usuario no tiene acceso a este negocio" });
+    }
+    if (acceso.rol === "dueño" && rol !== "dueño") {
+      const totalDuenos = await negocioUsuariosRepo.contarDuenos(req.negocioId);
+      if (totalDuenos <= 1) {
+        return res.status(400).json({ mensaje: "El negocio debe tener al menos un dueño" });
+      }
+    }
+    const actualizado = await negocioUsuariosRepo.actualizarRol({
+      negocioId: req.negocioId,
+      usuarioId,
+      rol,
+    });
+    return res.json({ mensaje: "Rol actualizado", acceso: actualizado });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+async function quitarEmpleado(req, res) {
+  try {
+    if (req.rolNegocio !== "dueño") {
+      return res.status(403).json({ mensaje: "Solo el dueño puede quitar acceso" });
+    }
+    const usuarioId = Number(req.params.usuarioId);
+    const acceso = await negocioUsuariosRepo.obtenerAcceso(req.negocioId, usuarioId);
+    if (!acceso) {
+      return res.status(404).json({ mensaje: "Ese usuario no tiene acceso a este negocio" });
+    }
+    if (acceso.rol === "dueño") {
+      const totalDuenos = await negocioUsuariosRepo.contarDuenos(req.negocioId);
+      if (totalDuenos <= 1) {
+        return res.status(400).json({ mensaje: "El negocio debe tener al menos un dueño" });
+      }
+    }
+    await negocioUsuariosRepo.eliminarUsuario({ negocioId: req.negocioId, usuarioId });
+    return res.json({ mensaje: "Acceso eliminado" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
 async function obtenerHorario(req, res) {
   try {
     const horario = await negociosRepo.obtenerHorario(req.negocioId);
@@ -140,6 +196,8 @@ module.exports = {
   actualizar,
   agregarEmpleado,
   listarEmpleados,
+  actualizarRolEmpleado,
+  quitarEmpleado,
   obtenerHorario,
   actualizarHorario,
 };
