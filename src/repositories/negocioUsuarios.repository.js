@@ -29,4 +29,30 @@ async function listarPorNegocio(negocioId) {
   return rows;
 }
 
-module.exports = { obtenerAcceso, agregarUsuario, listarPorNegocio };
+async function contarDuenos(negocioId) {
+  const { rows } = await pool.query(
+    "SELECT COUNT(*)::int AS total FROM negocio_usuarios WHERE negocio_id = $1 AND rol = 'dueño'",
+    [negocioId]
+  );
+  return rows[0].total;
+}
+
+async function actualizarRol({ negocioId, usuarioId, rol }) {
+  const { rows } = await pool.query(
+    `UPDATE negocio_usuarios SET rol = $3
+     WHERE negocio_id = $1 AND usuario_id = $2
+     RETURNING id, negocio_id, usuario_id, rol`,
+    [negocioId, usuarioId, rol]
+  );
+  return rows[0];
+}
+
+async function eliminarUsuario({ negocioId, usuarioId }) {
+  const { rowCount } = await pool.query(
+    "DELETE FROM negocio_usuarios WHERE negocio_id = $1 AND usuario_id = $2",
+    [negocioId, usuarioId]
+  );
+  return rowCount > 0;
+}
+
+module.exports = { obtenerAcceso, agregarUsuario, listarPorNegocio, contarDuenos, actualizarRol, eliminarUsuario };
