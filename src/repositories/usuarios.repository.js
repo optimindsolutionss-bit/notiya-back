@@ -37,4 +37,20 @@ async function buscarPorCorreoParcial(correo) {
   return rows;
 }
 
-module.exports = { buscarPorCorreo, crearUsuario, buscarPorId, buscarPorCorreoParcial };
+async function listarTodos({ limit = 200, offset = 0 } = {}) {
+  const { rows } = await pool.query(
+    "SELECT id, nombre, correo, es_superadmin FROM usuarios ORDER BY id LIMIT $1 OFFSET $2",
+    [limit, offset]
+  );
+  return rows;
+}
+
+async function actualizarSuperAdmin(id, esSuperAdmin) {
+  const { rows } = await pool.query(
+    "UPDATE usuarios SET es_superadmin = $2 WHERE id = $1 RETURNING id, nombre, correo, es_superadmin",
+    [id, esSuperAdmin]
+  );
+  return rows[0];
+}
+
+module.exports = { buscarPorCorreo, crearUsuario, buscarPorId, buscarPorCorreoParcial, listarTodos, actualizarSuperAdmin };

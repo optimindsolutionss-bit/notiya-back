@@ -48,7 +48,8 @@ async function buscarUsuarios(req, res) {
   try {
     const { correo } = req.query;
     if (!correo) {
-      return res.status(400).json({ mensaje: "El parámetro correo es obligatorio" });
+      const usuarios = await usuariosRepo.listarTodos();
+      return res.json({ usuarios });
     }
     const usuarios = await usuariosRepo.buscarPorCorreoParcial(correo);
     return res.json({ usuarios });
@@ -58,4 +59,25 @@ async function buscarUsuarios(req, res) {
   }
 }
 
-module.exports = { listarNegocios, crearNegocioParaUsuario, buscarUsuarios };
+async function actualizarSuperAdmin(req, res) {
+  try {
+    const id = Number(req.params.id);
+    if (id === req.usuario.id) {
+      return res.status(400).json({ mensaje: "No puedes quitarte tu propio permiso de super admin" });
+    }
+    const { esSuperAdmin } = req.body;
+    if (typeof esSuperAdmin !== "boolean") {
+      return res.status(400).json({ mensaje: "esSuperAdmin debe ser booleano" });
+    }
+    const usuario = await usuariosRepo.actualizarSuperAdmin(id, esSuperAdmin);
+    if (!usuario) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+    return res.json({ mensaje: "Usuario actualizado", usuario });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensaje: "Error del servidor" });
+  }
+}
+
+module.exports = { listarNegocios, crearNegocioParaUsuario, buscarUsuarios, actualizarSuperAdmin };
