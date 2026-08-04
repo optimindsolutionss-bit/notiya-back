@@ -3,6 +3,9 @@ const mensajesService = require("../services/mensajes.service");
 
 async function crear(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      return res.status(403).json({ mensaje: "No tienes acceso a productos" });
+    }
     const { categoriaId, nombre, descripcion, precio, imagenUrl } = req.body;
     if (!nombre || precio === undefined) {
       return res.status(400).json({ mensaje: "nombre y precio son obligatorios" });
@@ -23,6 +26,10 @@ async function crear(req, res) {
 
 async function listar(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      const productos = await productosRepo.listarBasico(req.negocioId);
+      return res.json({ productos });
+    }
     const productos = await productosRepo.listarPorNegocio(req.negocioId);
     return res.json({ productos });
   } catch (error) {
@@ -33,6 +40,9 @@ async function listar(req, res) {
 
 async function obtener(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      return res.status(403).json({ mensaje: "No tienes acceso a productos" });
+    }
     const producto = await productosRepo.buscarPorId(req.negocioId, req.params.productoId);
     if (!producto) {
       return res.status(404).json({ mensaje: "Producto no encontrado" });
@@ -46,6 +56,9 @@ async function obtener(req, res) {
 
 async function actualizar(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      return res.status(403).json({ mensaje: "No tienes acceso a productos" });
+    }
     const mapaCampos = {
       categoriaId: "categoria_id",
       nombre: "nombre",
@@ -70,6 +83,9 @@ async function actualizar(req, res) {
 
 async function actualizarDisponibilidad(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      return res.status(403).json({ mensaje: "No tienes acceso a productos" });
+    }
     const { disponible } = req.body;
     if (typeof disponible !== "boolean") {
       return res.status(400).json({ mensaje: "disponible debe ser booleano" });
@@ -96,6 +112,9 @@ async function actualizarDisponibilidad(req, res) {
 
 async function eliminar(req, res) {
   try {
+    if (req.rolNegocio === "promotor") {
+      return res.status(403).json({ mensaje: "No tienes acceso a productos" });
+    }
     const eliminado = await productosRepo.eliminar(req.negocioId, req.params.productoId);
     if (!eliminado) {
       return res.status(404).json({ mensaje: "Producto no encontrado" });

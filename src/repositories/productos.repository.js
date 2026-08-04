@@ -58,9 +58,18 @@ async function buscarPorNombreAproximado(negocioId, textoBusqueda) {
   return rows[0];
 }
 
+async function listarBasico(negocioId) {
+  const { rows } = await pool.query(
+    "SELECT id, nombre FROM productos WHERE negocio_id = $1 ORDER BY nombre",
+    [negocioId]
+  );
+  return rows;
+}
+
 module.exports = {
   crear,
   listarPorNegocio,
+  listarBasico,
   buscarPorId,
   actualizar,
   eliminar,

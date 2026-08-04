@@ -5,7 +5,7 @@ const controlador = require("../controllers/productos.controller");
 const router = Router({ mergeParams: true });
 
 router.use(verificarToken);
-router.use(verificarAccesoNegocio());
+router.use(verificarAccesoNegocio(["dueño", "editor", "promotor"]));
 
 router.post("/", controlador.crear);
 router.get("/", controlador.listar);
