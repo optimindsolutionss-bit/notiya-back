@@ -27,6 +27,17 @@ async function buscarPorId(negocioId) {
   return rows[0];
 }
 
+async function listarTodos() {
+  const { rows } = await pool.query(
+    `SELECT n.*, u.id AS dueno_id, u.nombre AS dueno_nombre, u.correo AS dueno_correo
+     FROM negocios n
+     LEFT JOIN negocio_usuarios nu ON nu.negocio_id = n.id AND nu.rol = 'dueño'
+     LEFT JOIN usuarios u ON u.id = nu.usuario_id
+     ORDER BY n.created_at DESC`
+  );
+  return rows;
+}
+
 async function actualizarNegocio(negocioId, campos) {
   const columnas = Object.keys(campos);
   if (columnas.length === 0) return buscarPorId(negocioId);
@@ -77,6 +88,7 @@ module.exports = {
   crearNegocio,
   listarPorUsuario,
   buscarPorId,
+  listarTodos,
   actualizarNegocio,
   reemplazarHorario,
   obtenerHorario,

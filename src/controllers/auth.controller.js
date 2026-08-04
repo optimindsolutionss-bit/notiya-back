@@ -32,15 +32,16 @@ async function login(req, res) {
     if (!passwordValida) {
       return res.status(401).json({ mensaje: "Credenciales inválidas" });
     }
+    const esSuperAdmin = Boolean(usuario.es_superadmin);
     const token = jwt.sign(
-      { id: usuario.id, correo: usuario.correo },
+      { id: usuario.id, correo: usuario.correo, esSuperAdmin },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
     return res.json({
       mensaje: "Login exitoso",
       token,
-      usuario: { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo },
+      usuario: { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo, esSuperAdmin },
     });
   } catch (error) {
     console.error(error);

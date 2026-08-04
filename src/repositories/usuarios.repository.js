@@ -18,4 +18,23 @@ async function crearUsuario({ nombre, correo, passwordHash }) {
   return rows[0];
 }
 
-module.exports = { buscarPorCorreo, crearUsuario };
+async function buscarPorId(id) {
+  const { rows } = await pool.query(
+    "SELECT id, nombre, correo, es_superadmin FROM usuarios WHERE id = $1",
+    [id]
+  );
+  return rows[0];
+}
+
+async function buscarPorCorreoParcial(correo) {
+  const { rows } = await pool.query(
+    `SELECT id, nombre, correo FROM usuarios
+     WHERE correo ILIKE $1
+     ORDER BY correo
+     LIMIT 20`,
+    [`%${correo}%`]
+  );
+  return rows;
+}
+
+module.exports = { buscarPorCorreo, crearUsuario, buscarPorId, buscarPorCorreoParcial };
