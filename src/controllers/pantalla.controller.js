@@ -20,6 +20,7 @@ async function obtener(req, res) {
         nombre: negocio.nombre,
         logoUrl: negocio.logo_url,
         descripcion: negocio.descripcion,
+        paletaPantalla: negocio.paleta_pantalla,
       },
       productos: productos.filter((p) => p.disponible),
       promociones,

@@ -2,6 +2,8 @@ const negociosRepo = require("../repositories/negocios.repository");
 const negocioUsuariosRepo = require("../repositories/negocioUsuarios.repository");
 const usuariosRepo = require("../repositories/usuarios.repository");
 
+const PALETAS_VALIDAS = ["medianoche", "oceano", "bosque", "ambar", "claro-clasico", "arena"];
+
 async function crear(req, res) {
   try {
     const { nombre, tipoNegocio, direccion, telefonoContacto, correoContacto } = req.body;
@@ -52,6 +54,9 @@ async function actualizar(req, res) {
     if (req.rolNegocio !== "dueño") {
       return res.status(403).json({ mensaje: "Solo el dueño puede editar el negocio" });
     }
+    if (req.body.paletaPantalla !== undefined && !PALETAS_VALIDAS.includes(req.body.paletaPantalla)) {
+      return res.status(400).json({ mensaje: "paletaPantalla inválida" });
+    }
     const mapaCampos = {
       nombre: "nombre",
       tipoNegocio: "tipo_negocio",
@@ -64,6 +69,7 @@ async function actualizar(req, res) {
       horaSilencioFin: "hora_silencio_fin",
       limiteEnviosDia: "limite_envios_dia",
       activo: "activo",
+      paletaPantalla: "paleta_pantalla",
     };
     const campos = {};
     for (const [campoBody, columna] of Object.entries(mapaCampos)) {
