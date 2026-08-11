@@ -4,8 +4,9 @@ async function crear(negocioId, datos) {
   const { rows } = await pool.query(
     `INSERT INTO comandos_ia
        (negocio_id, usuario_id, texto_original, audio_url, producto_detectado_id,
-        hora_detectada, accion_detectada, confianza)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        hora_detectada, accion_detectada, confianza, accion_tipo, accion_payload,
+        requiere_confirmacion, respuesta_ia)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING *`,
     [
       negocioId,
@@ -16,6 +17,10 @@ async function crear(negocioId, datos) {
       datos.horaDetectada || null,
       datos.accionDetectada || null,
       datos.confianza,
+      datos.accionTipo || null,
+      datos.accionPayload ? JSON.stringify(datos.accionPayload) : null,
+      datos.requiereConfirmacion || false,
+      datos.respuestaIA || null,
     ]
   );
   return rows[0];
